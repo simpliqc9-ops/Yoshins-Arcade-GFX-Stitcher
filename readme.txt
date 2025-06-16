@@ -113,3 +113,166 @@ Functionally, the interleaver reads the first group, which is sfx.13m, sfx.15m,
 sfx.17m and sfx.19m in that order, and this group is 2MB big. Note the size refers
 to an INDIVIDUAL ROM.
 After adding that, ya should be good to go!
+
+Note: See GFX_MAP below for details on editing SCR1/3 tiles
+
+---------------------FOR CPS1---------------------
+As of 1.4, the stitcher now supports CPS1 Games! The structure of resources files is
+a bit strange, but it should make some sense once you understand a couple key concepts
+Unlike the CPS2, ROMs can be read between groups, in essence, "spilling" over in to the next group in the needed
+area. Thankfully this only really happens in fringe cases like Forgotten Worlds, but it's still good to know about
+
+To understand how the Stitcher interleaves a "group", let's break down one from Forgotten Worlds
+
+	ROM_LOAD64_BYTE( "lw_2.2b",   0x000000, 0x20000, CRC(4bd75fee) SHA1(c27bfba951a0dc4f493937ceca335c50a1afeddf) ) // == lw-01.9d
+	ROM_LOAD64_BYTE( "lw_1.2a",   0x000001, 0x20000, CRC(65f41485) SHA1(fb05dffc87ee2f2b1b6646d54b13671f8eee0429) ) // == lw-01.9d
+	ROM_LOAD64_WORD( "lw-08.9b",  0x000002, 0x80000, CRC(25a8e43c) SHA1(d57cee1fc508db2677e84882fb814e4d9ad20543) ) // == lw-08.9f
+	ROM_LOAD64_BYTE( "lw_18.5e",  0x000004, 0x20000, CRC(b4b6241b) SHA1(92b6b530e18ce27ba8739ebba0d8096b1551026c) )
+	ROM_LOAD64_BYTE( "lw_17.5c",  0x000005, 0x20000, CRC(c5eea115) SHA1(22fe692eaf9dd00a56a76f46c19fb76bb5e5f0d6) )
+	ROM_LOAD64_BYTE( "lw_30.8h",  0x000006, 0x20000, CRC(b385954e) SHA1(d33adb5842e7b85d304836bd92a7a96be4ff3694) ) // == lw-12.9g
+	ROM_LOAD64_BYTE( "lw_29.8f",  0x000007, 0x20000, CRC(7bda1ac6) SHA1(5b8bd05f52798f98ae16efa2ff61c06e28a4e3a0) ) // == lw-12.9g
+
+First, we add the names to gfx_prefix. This lets the Stitcher reference the file of that name, so for instance, putting 1 in group_indexes
+is the same as saying "look at lw_2.2b". 
+Next, rom_byte_size. Simply, each ROM has a certain amount of data read from it when referenced, so simply line up the amount with the
+referenced ROMs, a WORD simply meaning 2 bytes.
+group_size is self explanatory, just how big this group is, how many ROMs are referenced in it
+group_indexes is the tricky one. This is here to handle the "spillage" mentioned earlier, more on that in a bit
+
+Following along, the vars would look something like this
+
+gfx_prefix = ["lw_2.2b","lw_1.2a","lw-08.9b","lw_18.5e","lw_17.5c","lw_30.8h","lw_29.8f"]
+group_size = [7]
+group_indexes = [1,2,3,4,5,6,7]
+rom_byte_size = [1,1,2,1,1,1,1]
+
+Just remember, rom_byte_size is basically there to define how many bytes to read from a ROM when it's referenced, group_indexes is used
+in tandem with group_size to reference each ROM as needed
+Understanding this, the real vars for this game look like this
+
+gfx_prefix = ["lw_2.2b","lw_1.2a","lw-08.9b","lw_18.5e","lw_17.5c","lw_30.8h","lw_29.8f","lw_4.3b","lw_3.3a","lw_20.7e","lw_19.7c","lw_32.9h","lw_31.9f","lw-02.6b","lw_14.10b","lw_13.10a","lw-06.9d","lw_26.10e","lw_25.10c","lw_16.11b","lw_15.11a","lw_28.11e","lw_27.11c",]
+rom_byte_size = [1,1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1]
+
+group_size = [7,7,6,6]
+group_indexes = [1,2,3,4,5,6,7,8,9,3,10,11,12,13,14,15,16,17,18,19,14,20,21,17,22,23]
+#group_indexes = [1, 2, 3, 4, 5, 6, 7
+#                 8, 9, 3, 10,11,12,13
+#                 14,15,16,17,18,19
+#                 14,20,21,17,22,23]
+
+I'll probably tidy this format up EVENTUALLY, like maybe figuring out a way to automatically generate group_indexes so ya don't
+have to do that manually, but for now it gets the job done
+
+UPDATE: Now supports 2 more variables, GFX_MAP, and DE_INTERLEAVE mode
+Taken from the new knights.py. Note, the addresses can be taken straight from Tile Molestor
+
+GFX_MAP = {0 : ["OBJ", 0x0000000,0x0220000],
+		   1 : ["SCR1",0x0220000,0x0260000],
+		   2 : ["SCR2",0x0260000,0x0340000],
+		   3 : ["SCR3",0x0340000,0x0400000],
+		   }
+DE_INTERLEAVE_MODE = 1 #1 for de-interleaving each GFX TYPE INSTEAD
+
+GFX_MAP allows you to map out the combined data into the 4 types of GFX, OBJ, SCR1/2/3. These sections of data are manipulated
+in such a way that mimics how the CPS1 "sees" each kind of GFX by seperating them into their own files
+DE_INTERLEAVE_MODE is a bit of a lazy hack if I'm honest, by default the Stitcher takes the default GFX file that it spits out
+and de-interleaves it. This ensures the update doesn't break any previous resource file, and simply adding
+	DE_INTERLEAVE_MODE = 1
+Will set the Stitcher to interleave with the 4 output files instead
+!!!! WARNING !!!!
+Do NOT add said line if you haven't mapped out the Data in full.  You can reference Mames source (look into GFX_MAPs related
+to B-Boards) as well as personal deduction using the combined file. The reason for this is sections can oftentimes overlap,
+and what Capcom decided to do with these overlaps could vary (example, Knights' B-Board has about 0x020000 bytes of SCR1 go 
+into SCR2s map. Capcom used the overlapping bit for SCR2 tiles) 
+SCR1 sections can be spotted by noticing 2 8x8 tiles repeat.
+For instance, the font in Knights of the Round in the interleaved data looks like
+	010123234545 etc
+SCR3 sections can be spotted by the GFX appearing deformed. This is cause there is additional interleaving involved
+As a starting point, I'd suggest referencing MAMEs source code as the B-Board of a given game can be useful as a starting point.
+CPS2 games were less restricted in this respect, so sadly you'll have to knuckle it out with them, but it can be done. You can
+find references to these GFX_MAPs in cps1_v.cpp
+Case in point, Knights of the Round
+
+	{"knights",     CPS_B_21_BT4, mapper_KR63B,  0x36, 0, 0x34 },
+
+And if we look at the Mapper, mapper_KR63B
+
+#define mapper_KR63B    { 0x8000, 0x8000, 0, 0 }, mapper_KR63B_table
+static const struct gfx_range mapper_KR63B_table[] =
+{
+	// verified from PAL dump:
+	// bank0 = pin 19 (ROMs 1,3) & pin 18 (ROMs 2,4)
+	// bank1 = pin 17 (ROMs 5,7) & pin 16 (ROMs 6,8)
+	// pins 12,13,14,15 are always enabled
+
+	/* type            start   end     bank */
+	{ GFXTYPE_SPRITES, 0x0000, 0x7fff, 0 },
+	{ GFXTYPE_SCROLL2, 0x0000, 0x7fff, 0 },
+
+	{ GFXTYPE_SCROLL1, 0x8000, 0x9fff, 1 },
+	{ GFXTYPE_SPRITES, 0x8000, 0xcfff, 1 },
+	{ GFXTYPE_SCROLL2, 0x8000, 0xcfff, 1 },
+	{ GFXTYPE_SCROLL3, 0xd000, 0xffff, 1 },
+	{ 0 }
+
+If we add 1 to the end ranges and multiply the values by 0x40...
+	/* type            start   end     bank */
+	{ GFXTYPE_SPRITES, 0x000000, 0x200000, 0 },
+	{ GFXTYPE_SCROLL2, 0x000000, 0x200000, 0 },
+
+	{ GFXTYPE_SCROLL1, 0x200000, 0x280000, 1 },
+	{ GFXTYPE_SPRITES, 0x200000, 0x340000, 1 },
+	{ GFXTYPE_SCROLL2, 0x200000, 0x340000, 1 },
+	{ GFXTYPE_SCROLL3, 0x340000, 0x400000, 1 },
+	{ 0 }
+
+We get ranges very similar to our final result! We can now take these ranges, view them in TM, and map out the GFX ourselves
+It's a touch tedious to do, but doing so gives you access to all the GFX in any game!
+
+
+---------------------FOR PROGRAM DATA---------------------
+As of 1.2, the Stitcher can now tinker with Program data, making it generally useful for hacking
+a games code/values! There are 2 methods of interaction, interleaving and appending. For this
+example, we'll look at Ghouls 'n Ghosts and how the Stitcher loads its program data for editing
+
+	#Define all the names of Program data here
+	prg_prefix = ["dme_29.10h", "dme_30.10j", "dme_27.9h", "dme_28.9j"]
+
+	#Here we make an array to store every "group" of ROMs to interleave between
+	prg_groupsize = [2,2]
+	#How many Bytes to interleave between groups
+	prg_grabsize = [1,1]
+	#How big each group is
+	prg_romsize = [0x20000,0x20000]
+	#swapendian = 2 #Size of Endian, or how many Bytes to flip apiece
+	#EXAMPLE: 2 is common, so a value of 0x4039 would be swapped to 0x3940
+	#NOTE: Some games interleave the machine code but leave raw data alone. Comment out the Swapendian should you need to edit one or the other
+
+	#Slap the rest of the data on there for ease of use
+	prg_append =  ["dm-17.7j", 0x80000]
+	#append_swapendian = 2
+	
+Should the variable prg_prefix exist, the Stitcher will assume you wish to interleave files in that
+array. We name all the ROMs we want to interleave in said array. Depending on the game, the group sizes
+can be different, but in this case, there are 2 values of 2. This tells the Stitcher to read the first 2
+ROMs as the first group, and the next 2 ROMs as the one after that. Grabsize refers to how many bytes to
+interleave between the groups, and the Romsize defines how much data to interleave, being the size of either
+of the ROMs in the group. With this structure, we've defined 2 groups. For the first group, take 1 byte of data
+from each and interleave it 0x20000 times. For example
+
+ROM1
+	00 01 00 19
+ROM2
+	FF A2 06 0A
+Resulting data
+	00 FF 01 A2 00 06 19 0A
+	
+We can also uncomment the Swapendian variable to flip the Bytes as their interleaved, as some games store the data
+as the opposite endian. This does the same process, but the resulting data would be this 
+
+	FF 00 A2 01 06 00 0A 19
+
+As for Appending, this process is much more straightforward, as the Stitcher merely slaps the data on to the end of
+Program data. We define the name of the ROM, and then how big it is. We can also uncomment the append_swapendian
+variable here to in order to flip the bytes like the previous example, You can define this array alone in order to use
+the as a means to edit an individual ROMs flipped data (see garoup in resources)

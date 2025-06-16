@@ -14,3 +14,12 @@ rsize4 = 2 << 22 #8388608 bytes, or 8MB
 gfx_romsize = [rsize3,rsize3]
 #Dictates the order in which files are read and written to
 file_writes = [13,15,17,19,14,16,18,20]
+GFX_MAP = { 0 : ["OBJ",0x000000,0x800000],
+            1 : ["SCR1",0x800000,0x8E0000],
+            2 : ["SCR3",0x8E0000,0xB00000],
+            3 : ["SCR2",0xB00000,0xD20000],
+            4 : ["OBJ",0xD20000,0x2000000],
+            }
+DE_INTERLEAVE_MODE = 1
+
+            

@@ -1,0 +1,23 @@
+{
+  "githubPullRequests.ignoredPullRequestBranches": ["main"],
+  "editor.defaultFormatter": "vscode.html-language-features",
+  "editor.formatOnPaste": true,
+  "editor.formatOnSave": true,
+  "editor.mouseWheelZoom": true,
+  "editor.wordWrap": "on",
+  "files.autoSave": "afterDelay",
+  "editor.aiStats.enabled": true,
+  "editor.allowVariableFontsInAccessibilityMode": true,
+  "editor.autoIndentOnPaste": true,
+  "editor.codeActions.triggerOnFocusChange": true,
+  "editor.columnSelection": true,
+  "editor.definitionLinkOpensInPeek": true,
+  "editor.experimental.asyncTokenizationLogging": true,
+  "editor.experimental.asyncTokenizationVerification": true,
+  "editor.experimental.preferTreeSitter.css": true,
+  "editor.experimental.preferTreeSitter.ini": true,
+  "editor.experimental.preferTreeSitter.regex": true,
+  "editor.experimental.preferTreeSitter.typescript": true,
+  "editor.experimental.treeSitterTelemetry": true,
+  "editor.experimentalGpuAcceleration": "on"
+}
